@@ -98,6 +98,7 @@ export default defineNuxtConfig({
         '@lucide/vue',
         'clsx',
         'nuxt > @nuxt/devtools > @vitejs/devtools-kit/client',
+        'nuxt > @nuxt/devtools > @vitejs/devtools/client/inject',
         'nuxt > @nuxt/devtools > @vue/devtools-core',
         'nuxt > @nuxt/devtools > @vue/devtools-kit',
         'nuxt > @nuxt/devtools > error-stack-parser-es',
