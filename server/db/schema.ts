@@ -70,3 +70,9 @@ export const photoTag = sqliteTable('photo_tags', {
   index('idx_photo_tags_photo_id').on(table.photoId),
   index('idx_photo_tags_tag_id').on(table.tagId),
 ])
+
+export const siteSetting = sqliteTable('site_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+})

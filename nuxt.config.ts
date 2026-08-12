@@ -30,13 +30,6 @@ export default defineNuxtConfig({
       deployConfig: true,
       nodeCompat: true,
     },
-    routeRules: {
-      '/photos/**': {
-        headers: {
-          'Cache-Control': 'public, max-age=31536000, immutable',
-        },
-      },
-    },
   },
   components: [
     {
@@ -72,6 +65,7 @@ export default defineNuxtConfig({
     viewTransition: true,
   },
   runtimeConfig: {
+    galleryAccessSecret: process.env.NUXT_GALLERY_ACCESS_SECRET || process.env.NUXT_SESSION_PASSWORD,
     public: {
       title: process.env.NUXT_PUBLIC_TITLE,
       description: process.env.NUXT_PUBLIC_DESCRIPTION,

@@ -1,7 +1,9 @@
 import { db } from '@nuxthub/db'
 import { and, eq, like, or, sql } from 'drizzle-orm'
+import { requireGalleryAccess } from '../../utils/galleryAccess'
 
 export default eventHandler(async (event) => {
+  await requireGalleryAccess(event)
   const query = getQuery(event)
   const {
     hidden,
