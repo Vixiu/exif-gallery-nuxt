@@ -40,6 +40,7 @@ function openEditDialog(photo: IPhoto) {
 
 <template>
   <div class="p-4 flex flex-col gap-4">
+    <SiteAccessSettings v-if="!demo" />
     <NuxtLinkLocale :to="demo ? '/admin/demo/upload' : '/admin/upload'">
       <div class="group p-4 border border-muted rounded-lg bg-background flex flex-col w-full items-center justify-center relative overflow-hidden md:shadow-xl">
         <span class="text-5xl text-transparent leading-none font-semibold my-8 text-center pointer-events-none whitespace-pre-wrap from-black to-gray-300/80 bg-gradient-to-b bg-clip-text dark:from-white dark:to-slate-900/10">
