@@ -13,6 +13,6 @@ export default eventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Invalid password' })
   }
 
-  setGalleryAccessCookie(event, expectedHash)
+  await setGalleryAccessCookie(event, expectedHash)
   return { success: true }
 })
