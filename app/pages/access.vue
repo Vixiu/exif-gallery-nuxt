@@ -1,5 +1,4 @@
 <script setup lang="ts">
-const router = useRouter()
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -15,7 +14,7 @@ async function login() {
       method: 'POST',
       body: { password: password.value },
     })
-    await router.replace('/')
+    window.location.assign('/')
   }
   catch (err: any) {
     error.value = err?.data?.statusMessage || 'Invalid password'
