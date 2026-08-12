@@ -9,7 +9,7 @@ export default eventHandler(async (event) => {
   const password = typeof body?.password === 'string' ? body.password : ''
   const expectedHash = await getGalleryPasswordHash()
 
-  if (!expectedHash || !(await hashGalleryPassword(password)).toLowerCase().localeCompare(expectedHash)) {
+  if (!expectedHash || (await hashGalleryPassword(password)) !== expectedHash) {
     throw createError({ statusCode: 401, statusMessage: 'Invalid password' })
   }
 
