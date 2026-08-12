@@ -107,7 +107,6 @@ export default defineNuxtConfig({
         'nuxt > @nuxt/devtools > @vitejs/devtools-kit/client',
         'nuxt > @nuxt/devtools > @vitejs/devtools/client/inject',
         'nuxt > @nuxt/devtools > @vitejs/devtools-core',
-        'nuxt > @nuxt/devtools > @vitejs/devtools-kit',
         'nuxt > @nuxt/devtools > @vitejs/devtools/client/inject',
         'reka-ui',
         'tailwind-merge',
