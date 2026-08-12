@@ -84,7 +84,7 @@ export async function hasGalleryAccess(event: Parameters<typeof getCookie>[0]) {
 export async function setGalleryAccessCookie(event: Parameters<typeof setCookie>[0], passwordHash: string) {
   setCookie(event, COOKIE_NAME, await createAccessToken(passwordHash), {
     httpOnly: true,
-    secure: process.env.NODE_ENV !== 'development',
+    secure: getRequestProtocol(event) === 'https',
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 30,
