@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import { db } from '@nuxthub/db'
 
 const ENABLED_KEY = 'gallery_access_enabled'
@@ -8,7 +9,7 @@ let tableReady: Promise<void> | undefined
 
 async function ensureSiteSettingsTable() {
   if (!tableReady) {
-    tableReady = db.run(`CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated_at INTEGER DEFAULT CURRENT_TIMESTAMP)`).then(() => undefined)
+    tableReady = db.run(sql`CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated_at INTEGER DEFAULT CURRENT_TIMESTAMP)`).then(() => undefined)
       .catch((error) => {
         tableReady = undefined
         throw error
@@ -19,17 +20,13 @@ async function ensureSiteSettingsTable() {
 
 async function getSetting(key: string) {
   await ensureSiteSettingsTable()
-  const result = await db.run(`SELECT value FROM site_settings WHERE key = ? LIMIT 1`, key)
+  const result = await db.run(sql`SELECT value FROM site_settings WHERE key = ${key} LIMIT 1`)
   return result.rows[0]?.value as string | undefined
 }
 
 async function setSetting(key: string, value: string) {
   await ensureSiteSettingsTable()
-  await db.run(
-    `INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
-    key,
-    value,
-  )
+  await db.run(sql`INSERT INTO site_settings (key, value, updated_at) VALUES (${key}, ${value}, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`)
 }
 
 function getSecret() {
@@ -81,8 +78,6 @@ export async function saveGalleryAccessSettings(enabled: boolean, password?: str
 
   await setSetting(ENABLED_KEY, enabled ? '1' : '0')
 
-  // Read back from D1 instead of trusting the request body. This makes the
-  // admin UI immediately reflect what was actually persisted.
   const saved = await getGalleryAccessSettings()
   if (saved.enabled !== enabled || (password !== undefined && !saved.passwordConfigured))
     throw createError({ statusCode: 500, statusMessage: 'Gallery access settings were not persisted' })
