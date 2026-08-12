@@ -30,13 +30,6 @@ export default defineNuxtConfig({
       deployConfig: true,
       nodeCompat: true,
     },
-    routeRules: {
-      '/photos/**': {
-        headers: {
-          'Cache-Control': 'public, max-age=31536000, immutable',
-        },
-      },
-    },
   },
   components: [
     {
