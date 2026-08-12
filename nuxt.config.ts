@@ -72,6 +72,7 @@ export default defineNuxtConfig({
     viewTransition: true,
   },
   runtimeConfig: {
+    galleryAccessSecret: process.env.NUXT_GALLERY_ACCESS_SECRET || process.env.NUXT_SESSION_PASSWORD,
     public: {
       title: process.env.NUXT_PUBLIC_TITLE,
       description: process.env.NUXT_PUBLIC_DESCRIPTION,
@@ -105,10 +106,9 @@ export default defineNuxtConfig({
         'clsx',
         'nuxt > @nuxt/devtools > @vitejs/devtools-kit/client',
         'nuxt > @nuxt/devtools > @vitejs/devtools/client/inject',
-        'nuxt > @nuxt/devtools > @vue/devtools-core',
-        'nuxt > @nuxt/devtools > @vue/devtools-kit',
-        'nuxt > @nuxt/devtools > error-stack-parser-es',
-        'nuxt > @nuxt/devtools > vite-plugin-vue-tracer/client/overlay',
+        'nuxt > @nuxt/devtools > @vitejs/devtools-core',
+        'nuxt > @nuxt/devtools > @vitejs/devtools-kit',
+        'nuxt > @nuxt/devtools > @vitejs/devtools/client/inject',
         'reka-ui',
         'tailwind-merge',
         'vue-sonner',
