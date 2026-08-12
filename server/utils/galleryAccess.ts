@@ -66,6 +66,10 @@ export async function saveGalleryAccessSettings(enabled: boolean, password?: str
 }
 
 export async function hasGalleryAccess(event: Parameters<typeof getCookie>[0]) {
+  const session = await getUserSession(event)
+  if (session.user?.role === 'admin')
+    return true
+
   const settings = await getGalleryAccessSettings()
   if (!settings.enabled)
     return true
