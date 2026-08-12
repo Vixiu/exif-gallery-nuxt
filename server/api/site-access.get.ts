@@ -1,6 +1,9 @@
-import { getGalleryAccessSettings } from '../utils/galleryAccess'
+import { getGalleryAccessSettings, hasGalleryAccess } from '../utils/galleryAccess'
 
 export default eventHandler(async (event) => {
-  await requireUserSession(event)
-  return await getGalleryAccessSettings()
+  const settings = await getGalleryAccessSettings()
+  return {
+    ...settings,
+    authorized: !settings.enabled || await hasGalleryAccess(event),
+  }
 })
