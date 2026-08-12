@@ -1,4 +1,3 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { db } from '@nuxthub/db'
 
@@ -14,20 +13,24 @@ function getSecret() {
   return secret
 }
 
+function toHex(buffer: ArrayBuffer) {
+  return Array.from(new Uint8Array(buffer), byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
 export async function hashGalleryPassword(password: string) {
   const data = new TextEncoder().encode(password)
-  const digest = await crypto.subtle.digest('SHA-256', data)
-  return Buffer.from(digest).toString('hex')
+  return toHex(await crypto.subtle.digest('SHA-256', data))
 }
 
-function createAccessToken(passwordHash: string) {
-  return createHmac('sha256', getSecret()).update(`gallery:${passwordHash}`).digest('hex')
-}
-
-function safeEqual(a: string, b: string) {
-  const aa = Buffer.from(a)
-  const bb = Buffer.from(b)
-  return aa.length === bb.length && timingSafeEqual(aa, bb)
+async function createAccessToken(passwordHash: string) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(getSecret()),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  return toHex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`gallery:${passwordHash}`)))
 }
 
 export async function getGalleryAccessSettings() {
@@ -72,11 +75,14 @@ export async function hasGalleryAccess(event: Parameters<typeof getCookie>[0]) {
     return false
 
   const token = getCookie(event, COOKIE_NAME)
-  return Boolean(token && safeEqual(token, createAccessToken(passwordHash)))
+  if (!token)
+    return false
+
+  return token === await createAccessToken(passwordHash)
 }
 
-export function setGalleryAccessCookie(event: Parameters<typeof setCookie>[0], passwordHash: string) {
-  setCookie(event, COOKIE_NAME, createAccessToken(passwordHash), {
+export async function setGalleryAccessCookie(event: Parameters<typeof setCookie>[0], passwordHash: string) {
+  setCookie(event, COOKIE_NAME, await createAccessToken(passwordHash), {
     httpOnly: true,
     secure: process.env.NODE_ENV !== 'development',
     sameSite: 'lax',
