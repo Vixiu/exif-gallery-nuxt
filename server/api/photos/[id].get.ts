@@ -1,7 +1,9 @@
 import { db } from '@nuxthub/db'
 import { eq } from 'drizzle-orm'
+import { requireGalleryAccess } from '../../utils/galleryAccess'
 
 export default eventHandler(async (event) => {
+  await requireGalleryAccess(event)
   const { id } = event.context.params || {}
 
   if (!id) {
