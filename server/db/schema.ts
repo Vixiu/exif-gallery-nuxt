@@ -46,6 +46,7 @@ export const photo = sqliteTable('photos', {
   index('idx_photos_priority_order').on(table.priorityOrder),
 ])
 
+// New tag table for storing unique tags
 export const tag = sqliteTable('tags', {
   id: text('id').primaryKey().$defaultFn(() => createCuid(8)),
   name: text('name').notNull().unique(),
@@ -55,6 +56,7 @@ export const tag = sqliteTable('tags', {
   index('idx_tags_photo_count').on(table.photoCount),
 ])
 
+// Junction table for many-to-many relationship between photos and tags
 export const photoTag = sqliteTable('photo_tags', {
   photoId: text('photo_id')
     .notNull()
