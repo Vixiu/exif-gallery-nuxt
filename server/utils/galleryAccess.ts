@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { db } from '@nuxthub/db'
+import * as schema from '../db/schema'
 
 const ENABLED_KEY = 'gallery_access_enabled'
 const PASSWORD_HASH_KEY = 'gallery_access_password_hash'
@@ -43,10 +44,11 @@ export async function getGalleryAccessSettings() {
 }
 
 export async function getGalleryPasswordHash() {
-  const row = await db.query.siteSetting.findFirst({
-    where: eq(schema.siteSetting.key, PASSWORD_HASH_KEY),
-  })
-  return row?.value || null
+  const rows = await db.select({ value: schema.siteSetting.value })
+    .from(schema.siteSetting)
+    .where(eq(schema.siteSetting.key, PASSWORD_HASH_KEY))
+    .limit(1)
+  return rows[0]?.value || null
 }
 
 export async function saveGalleryAccessSettings(enabled: boolean, password?: string) {
