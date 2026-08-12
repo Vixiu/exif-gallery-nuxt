@@ -6,6 +6,22 @@ const ENABLED_KEY = 'gallery_access_enabled'
 const PASSWORD_HASH_KEY = 'gallery_access_password_hash'
 const COOKIE_NAME = 'gallery_access'
 
+// Cloudflare deployments do not always apply newly-added project migrations when
+// the Worker is deployed from the dashboard. Make the tiny settings table
+// self-initializing so the feature works on an already-created D1 database too.
+let tableReady: Promise<void> | undefined
+
+async function ensureSiteSettingsTable() {
+  if (!tableReady) {
+    tableReady = db.run(`CREATE TABLE IF NOT EXISTS site_settings (\`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL, \`updated_at\` integer DEFAULT CURRENT_TIMESTAMP)`).then(() => undefined)
+      .catch((error) => {
+        tableReady = undefined
+        throw error
+      })
+  }
+  await tableReady
+}
+
 function getSecret() {
   const config = useRuntimeConfig()
   const secret = config.galleryAccessSecret as string | undefined
@@ -35,6 +51,7 @@ async function createAccessToken(passwordHash: string) {
 }
 
 export async function getGalleryAccessSettings() {
+  await ensureSiteSettingsTable()
   const rows = await db.select().from(schema.siteSetting)
   const values = Object.fromEntries(rows.map(row => [row.key, row.value]))
   return {
@@ -44,6 +61,7 @@ export async function getGalleryAccessSettings() {
 }
 
 export async function getGalleryPasswordHash() {
+  await ensureSiteSettingsTable()
   const rows = await db.select({ value: schema.siteSetting.value })
     .from(schema.siteSetting)
     .where(eq(schema.siteSetting.key, PASSWORD_HASH_KEY))
@@ -52,6 +70,8 @@ export async function getGalleryPasswordHash() {
 }
 
 export async function saveGalleryAccessSettings(enabled: boolean, password?: string) {
+  await ensureSiteSettingsTable()
+
   if (password !== undefined) {
     if (password.length < 4)
       throw createError({ statusCode: 400, statusMessage: 'Password must be at least 4 characters' })
