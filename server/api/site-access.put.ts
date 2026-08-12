@@ -1,4 +1,4 @@
-import { saveGalleryAccessSettings } from '../utils/galleryAccess'
+import { getGalleryAccessSettings, saveGalleryAccessSettings } from '../utils/galleryAccess'
 
 export default eventHandler(async (event) => {
   await requireUserSession(event)
