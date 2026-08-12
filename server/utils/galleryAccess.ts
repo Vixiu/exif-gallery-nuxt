@@ -1,25 +1,35 @@
-import { eq } from 'drizzle-orm'
 import { db } from '@nuxthub/db'
-import * as schema from '../db/schema'
 
 const ENABLED_KEY = 'gallery_access_enabled'
 const PASSWORD_HASH_KEY = 'gallery_access_password_hash'
 const COOKIE_NAME = 'gallery_access'
 
-// Cloudflare deployments do not always apply newly-added project migrations when
-// the Worker is deployed from the dashboard. Make the tiny settings table
-// self-initializing so the feature works on an already-created D1 database too.
 let tableReady: Promise<void> | undefined
 
 async function ensureSiteSettingsTable() {
   if (!tableReady) {
-    tableReady = db.run(`CREATE TABLE IF NOT EXISTS site_settings (\`key\` text PRIMARY KEY NOT NULL, \`value\` text NOT NULL, \`updated_at\` integer DEFAULT CURRENT_TIMESTAMP)`).then(() => undefined)
+    tableReady = db.run(`CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated_at INTEGER DEFAULT CURRENT_TIMESTAMP)`).then(() => undefined)
       .catch((error) => {
         tableReady = undefined
         throw error
       })
   }
   await tableReady
+}
+
+async function getSetting(key: string) {
+  await ensureSiteSettingsTable()
+  const result = await db.run(`SELECT value FROM site_settings WHERE key = ? LIMIT 1`, key)
+  return result.rows[0]?.value as string | undefined
+}
+
+async function setSetting(key: string, value: string) {
+  await ensureSiteSettingsTable()
+  await db.run(
+    `INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+    key,
+    value,
+  )
 }
 
 function getSecret() {
@@ -35,8 +45,7 @@ function toHex(buffer: ArrayBuffer) {
 }
 
 export async function hashGalleryPassword(password: string) {
-  const data = new TextEncoder().encode(password)
-  return toHex(await crypto.subtle.digest('SHA-256', data))
+  return toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)))
 }
 
 async function createAccessToken(passwordHash: string) {
@@ -51,40 +60,32 @@ async function createAccessToken(passwordHash: string) {
 }
 
 export async function getGalleryAccessSettings() {
-  await ensureSiteSettingsTable()
-  const rows = await db.select().from(schema.siteSetting)
-  const values = Object.fromEntries(rows.map(row => [row.key, row.value]))
+  const enabled = await getSetting(ENABLED_KEY)
+  const passwordHash = await getSetting(PASSWORD_HASH_KEY)
   return {
-    enabled: values[ENABLED_KEY] === '1',
-    passwordConfigured: Boolean(values[PASSWORD_HASH_KEY]),
+    enabled: enabled === '1',
+    passwordConfigured: Boolean(passwordHash),
   }
 }
 
 export async function getGalleryPasswordHash() {
-  await ensureSiteSettingsTable()
-  const rows = await db.select({ value: schema.siteSetting.value })
-    .from(schema.siteSetting)
-    .where(eq(schema.siteSetting.key, PASSWORD_HASH_KEY))
-    .limit(1)
-  return rows[0]?.value || null
+  return await getSetting(PASSWORD_HASH_KEY) || null
 }
 
 export async function saveGalleryAccessSettings(enabled: boolean, password?: string) {
-  await ensureSiteSettingsTable()
-
   if (password !== undefined) {
     if (password.length < 4)
       throw createError({ statusCode: 400, statusMessage: 'Password must be at least 4 characters' })
-
-    const passwordHash = await hashGalleryPassword(password)
-    await db.insert(schema.siteSetting)
-      .values({ key: PASSWORD_HASH_KEY, value: passwordHash })
-      .onConflictDoUpdate({ target: schema.siteSetting.key, set: { value: passwordHash, updatedAt: new Date() } })
+    await setSetting(PASSWORD_HASH_KEY, await hashGalleryPassword(password))
   }
 
-  await db.insert(schema.siteSetting)
-    .values({ key: ENABLED_KEY, value: enabled ? '1' : '0' })
-    .onConflictDoUpdate({ target: schema.siteSetting.key, set: { value: enabled ? '1' : '0', updatedAt: new Date() } })
+  await setSetting(ENABLED_KEY, enabled ? '1' : '0')
+
+  // Read back from D1 instead of trusting the request body. This makes the
+  // admin UI immediately reflect what was actually persisted.
+  const saved = await getGalleryAccessSettings()
+  if (saved.enabled !== enabled || (password !== undefined && !saved.passwordConfigured))
+    throw createError({ statusCode: 500, statusMessage: 'Gallery access settings were not persisted' })
 }
 
 export async function hasGalleryAccess(event: Parameters<typeof getCookie>[0]) {
@@ -97,11 +98,8 @@ export async function hasGalleryAccess(event: Parameters<typeof getCookie>[0]) {
     return true
 
   const passwordHash = await getGalleryPasswordHash()
-  if (!passwordHash)
-    return false
-
   const token = getCookie(event, COOKIE_NAME)
-  if (!token)
+  if (!passwordHash || !token)
     return false
 
   return token === await createAccessToken(passwordHash)
@@ -122,7 +120,6 @@ export function clearGalleryAccessCookie(event: Parameters<typeof deleteCookie>[
 }
 
 export async function requireGalleryAccess(event: Parameters<typeof getCookie>[0]) {
-  if (!(await hasGalleryAccess(event))) {
+  if (!(await hasGalleryAccess(event)))
     throw createError({ statusCode: 401, statusMessage: 'Gallery access password required' })
-  }
 }
